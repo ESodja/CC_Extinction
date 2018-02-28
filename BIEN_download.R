@@ -30,22 +30,45 @@ gsub("_", " ", data.downloadable$as.char, fixed = TRUE)
 data.download <- BIEN_ranges_species(species=data.downloadable$as.char, 
                                      directory="C:/Users/Eric/Documents/Plant_Extinction/GIS_Data")
 
-# Occurrence data for all species (WARNING: THIS IS LIKE 30 GB OF DATA)
-species.occurrence <- BIEN_occurrence_species(species=species$x[1], only.new.world = T, native.status = T)
+# Occurrence data for all species (WARNING: THIS IS LIKE 30 GB OF DATA without only.new.world/native status = T)
+species.occurrence <- BIEN_occurrence_species(species=species$x, only.new.world = T, native.status = T)
 write.csv(species.occurrence, "C:/Users/Eric/Documents/Plant_Extinction/GIS_Data/species_occurrences.csv")
+write.csv(species.occurrence, "/home/eric/Documents/Projects/C_Working/CC_Extinction/NW_Native_Occurrence.csv")
 
 # In ArcMap, combined all species range shapefiles into one file using Merge
 ## Potentially just use occurrence data exclusively
 # In ArcMap, combine biome data into 14 discrete biomes based on Biome column of WWF data using merge
+library(rgeos)
+library(rgdal)
+library(maptools)
+library(gridExtra)
+library(sp)
+
+WWF_Biomes <- readOGR(dsn = "/home/eric/Documents/Projects/C_Working/CC_Extinction/Biome_Boundaries_WWF", 
+                      layer = "wwf_terr_ecos")
+
+#View shapefile attributes
+head(WWF_Biomes@data)
+
+# get rid of data that has NAs in the location data
+so.cleaned <- species.occurrence[complete.cases(species.occurrence[, c("latitude", "longitude")]),]
+
+coordinates(so.cleaned) <- ~longitude+latitude
+proj4string(so.cleaned) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+so.projected <- spTransform(so.cleaned, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+species.occurrence.data <- over(so.cleaned, WWF_Biomes[, "BIOME"])
+species.occurrence$biome <- species.occurrence.data$
+Merged_Biomes <- unionSpatialPolygons(WWF_Biomes, unique(WWF_Biomes$BIOME))
+
 # Spatial join to get biomes and species (i.e. which biomes have what species in them)
 
-function(species_dir){
-    species.list <- read.csv(species_dir)
-    data.available <- BIEN_ranges_species(species=species.list$x, match_names_only = TRUE)
-    data.downloadable <- subset(data.available, `Range_map_available?` == "Yes")
-    data.missed <- subset(data.available, `Range_map_available?` == "No")
-    
-}
+# function(species_dir){
+#     species.list <- read.csv(species_dir)
+#     data.available <- BIEN_ranges_species(species=species.list$x, match_names_only = TRUE)
+#     data.downloadable <- subset(data.available, `Range_map_available?` == "Yes")
+#     data.missed <- subset(data.available, `Range_map_available?` == "No")
+#     
+# }
 
 ## Trait Data
 # how many of which observed trait data per species
@@ -67,8 +90,10 @@ for (i in unique(species.traits$scrubbed_species_binomial)){
     phmin <- min(active.subset$)
     outlist <- list(nrow=8)
 }
-map('world', fill=T, col="grey", bg="light blue", xlim=c(-180, -20), ylim=c(-60, 80))
 
-points(cbind(species.occurrence$longitude, species.occurrence$latitude), col="red")
+# Creates a background map
+map('world', fill=T, col="grey", bg="light blue", xlim=c(-180, -20), ylim=c(-60, 80))
+# Plots occurrence points on the map
+points(cbind(so.cleaned$longitude, so.cleaned$latitude), col="red")
 
 plot(species.occurrence, col="green", add=T)
