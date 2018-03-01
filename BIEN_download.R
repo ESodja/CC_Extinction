@@ -70,6 +70,9 @@ proj4string(so.cleaned) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84
 species.occurrence.data <- over(so.cleaned, WWF_Biomes[, "BIOME"])
 so.cleaned$biome <- species.occurrence.data$BIOME
 
+# collapse the species data so it has species and biome only
+
+
 # export occurrence - biome data
 write.csv(so.cleaned, "C:/Users/Eric/Documents/Plant_Extinction/species_occurrence_processed.csv")
 
@@ -88,6 +91,7 @@ BIEN_trait_traits_per_species(species = species$x)
 # download trait data
 species.traits <- BIEN_trait_species(species=species$x)
 write.csv(species.traits, "/home/eric/Documents/Projects/C_Working/Biomes/species_trait_data.csv")
+write.csv(species.traits, "C:/Users/Eric/Documents/Plant_Extinction/species_trait_data.csv")
 
 out.df <- data.frame(matrix(ncol=7, nrow=0))
 column.names <- c("Species", "Plant_Height_Min", "Plant_Height_Max", 
@@ -98,9 +102,30 @@ for (i in unique(species.traits$scrubbed_species_binomial)){
     # For each species, find the max and min of each trait of interest
     active.subset <- subset(species.traits, species==i)
     spec.out <- i
-    phmin <- min(active.subset$)
-    outlist <- list(nrow=8)
+    # does growth form need to have separate values for the other trait ranges? 
+    # i.e. something as a shrub has some height values, where that thing as a tree has another range
+    # this does that. ^^ if it shouldn't, move everything but the growth form variable out of this for loop
+    # growth form will need to be looked into a little bit more (herb_tree? really??)
+    for (j in unique(active.subset$trait_value[active.subset$trait_name=="whole plant growth form diversity"])){
+      gf <- j
+      # same goes for dispersal syndrome (we will see if it matters in the output)
+      for (k in unique(active.subset$trait_value[active.subset$trait_name=="whole plant dispersal syndrome"])){
+        ds <- k
+        # print(unique(active.subset$trait_name))
+        ph <- active.subset$trait_value[active.subset$trait_name=="whole plant height"]
+        phmin <- min(ph)
+        phmax <- max(ph)
+        sm <- active.subset$trait_value[active.subset$trait_name=="seed mass"]
+        smmin <- min(sm)
+        smmax <- max(sm)
+        data.out <- c(i, phmin, phmax, smmin, smmax, gf, ds)
+        out.df = rbindlist(list(out.df, as.list(data.out)))
+      }
+    }
 }
+
+## species names are not matching!!
+write.csv(out.df, "C:/Users/Eric/Documents/Plant_Extinction/traits_by_species.csv")
 
 # Creates a background map
 map('world', fill=T, col="grey", bg="light blue", xlim=c(-180, -20), ylim=c(-60, 80))
