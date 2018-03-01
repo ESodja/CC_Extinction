@@ -32,7 +32,8 @@ data.download <- BIEN_ranges_species(species=data.downloadable$as.char,
 
 # Occurrence data for all species (WARNING: THIS IS LIKE 30 GB OF DATA without only.new.world/native status = T)
 species.occurrence <- BIEN_occurrence_species(species=species$x, only.new.world = T, native.status = T)
-write.csv(species.occurrence, "C:/Users/Eric/Documents/Plant_Extinction/GIS_Data/species_occurrences.csv")
+species.occurrence <- read.csv("C:/Users/Eric/Documents/Plant_Extinction/NW_Native_Occurrence.csv")
+write.csv(species.occurrence, "C:/Users/Eric/Documents/Plant_Extinction/NW_Native_Occurrence.csv")
 write.csv(species.occurrence, "/home/eric/Documents/Projects/C_Working/CC_Extinction/NW_Native_Occurrence.csv")
 
 # In ArcMap, combined all species range shapefiles into one file using Merge
@@ -44,6 +45,7 @@ library(maptools)
 library(gridExtra)
 library(sp)
 
+WWF_Biomes <- readOGR(dsn = "C:/Users/Eric/Documents/Plant_Extinction/GIS_Data/WWF_Biomes", layer = "wwf_terr_ecos")
 WWF_Biomes <- readOGR(dsn = "/home/eric/Documents/Projects/C_Working/CC_Extinction/Biome_Boundaries_WWF", 
                       layer = "wwf_terr_ecos")
 
@@ -53,14 +55,23 @@ head(WWF_Biomes@data)
 # get rid of data that has NAs in the location data
 so.cleaned <- species.occurrence[complete.cases(species.occurrence[, c("latitude", "longitude")]),]
 
+# make the coodinates read as geographic data
 coordinates(so.cleaned) <- ~longitude+latitude
-proj4string(so.cleaned) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-so.projected <- spTransform(so.cleaned, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
-species.occurrence.data <- over(so.cleaned, WWF_Biomes[, "BIOME"])
-species.occurrence$biome <- species.occurrence.data$
-Merged_Biomes <- unionSpatialPolygons(WWF_Biomes, unique(WWF_Biomes$BIOME))
 
-# Spatial join to get biomes and species (i.e. which biomes have what species in them)
+# get rid of some messed up location data
+so.cleaned <- so.cleaned[so.cleaned@coords[,2]<90,]
+
+# attach a coordinate system to the data
+proj4string(so.cleaned) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+
+# UNNECESSARY? so.projected <- spTransform(so.cleaned, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+
+# create a table of which occurrences are in which biomes, and add that table to the cleaned species occurrence data table
+species.occurrence.data <- over(so.cleaned, WWF_Biomes[, "BIOME"])
+so.cleaned$biome <- species.occurrence.data$BIOME
+
+# export occurrence - biome data
+write.csv(so.cleaned, "C:/Users/Eric/Documents/Plant_Extinction/species_occurrence_processed.csv")
 
 # function(species_dir){
 #     species.list <- read.csv(species_dir)
