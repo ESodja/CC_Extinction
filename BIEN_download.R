@@ -74,7 +74,8 @@ library(maptools)
 library(gridExtra)
 library(sp)
 
-WWF_Biomes <- readOGR(dsn = "C:/Users/Eric/Documents/Plant_Extinction/GIS_Data/WWF_Biomes", layer = "wwf_terr_ecos")
+WWF_Biomes <- readOGR(dsn = "C:/Users/Eric/Documents/Plant_Extinction/GIS_Data/WWF_Biomes", 
+                      layer = "wwf_terr_ecos")
 WWF_Biomes <- readOGR(dsn = "/home/eric/Documents/Projects/C_Working/CC_Extinction/Biome_Boundaries_WWF", 
                       layer = "wwf_terr_ecos")
 
@@ -115,18 +116,18 @@ write.csv(so.cleaned, "C:/Users/Eric/Documents/Plant_Extinction/species_occurren
 
 ## Trait Data
 # how many of which observed trait data per species
-BIEN_trait_traits_per_species(species = species$x)
+BIEN_trait_traits_per_species(species = species.in.BIEN)
 
 # download trait data
-species.traits <- BIEN_trait_species(species=species$x)
-write.csv(species.traits, "/home/eric/Documents/Projects/C_Working/Biomes/species_trait_data.csv")
+species.traits <- BIEN_trait_species(species=species.in.BIEN)
+write.csv(species.traits, "/home/eric/Documents/Projects/C_Working/CC_Extinction/species_trait_data.csv")
 write.csv(species.traits, "C:/Users/Eric/Documents/Plant_Extinction/species_trait_data.csv")
 
 out.df <- data.frame(matrix(ncol=7, nrow=0))
 column.names <- c("Species", "Plant_Height_Min", "Plant_Height_Max", 
                   "Seed_Mass_Min", "Seed_Mass_Max", "Growth Form", "Dispersal Mode") #Add biome to this list?
 colnames(out.df) <- column.names
-
+library(data.table)
 for (i in unique(species.traits$scrubbed_species_binomial)){
     # For each species, find the max and min of each trait of interest
     active.subset <- subset(species.traits, species==i)
@@ -137,8 +138,10 @@ for (i in unique(species.traits$scrubbed_species_binomial)){
     # growth form will need to be looked into a little bit more (herb_tree? really??)
     for (j in unique(active.subset$trait_value[active.subset$trait_name=="whole plant growth form diversity"])){
       gf <- j
-      # same goes for dispersal syndrome (we will see if it matters in the output)
-      for (k in unique(active.subset$trait_value[active.subset$trait_name=="whole plant dispersal syndrome"])){
+      # same goes for dispersal syndrome (we will see if it matters in the output) -- skipping blank dispersal syndromes
+      wpds <- unique(active.subset$trait_value[active.subset$trait_name=="whole plant dispersal syndrome"])
+      wpds[is.na(wpds)] <- "none"
+      for (k in wpds){
         ds <- k
         # print(unique(active.subset$trait_name))
         ph <- active.subset$trait_value[active.subset$trait_name=="whole plant height"]
@@ -155,7 +158,7 @@ for (i in unique(species.traits$scrubbed_species_binomial)){
 
 ## species names are not matching!!
 write.csv(out.df, "C:/Users/Eric/Documents/Plant_Extinction/traits_by_species.csv")
-
+write.csv(out.df, "/home/eric/Documents/Projects/C_Working/CC_Extinction/traits_by_species.csv")
 # Creates a background map
 map('world', fill=T, col="grey", bg="light blue", xlim=c(-180, -20), ylim=c(-60, 80))
 # Plots occurrence points on the map
