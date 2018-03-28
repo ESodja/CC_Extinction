@@ -2,6 +2,7 @@
 
 library(BIEN)
 library(maps)
+library(data.table)
 
 # Import the species list
 ## species <- read.csv("this is a species csv.csv", as.is=TRUE)
@@ -44,6 +45,7 @@ dataframe <- as.data.frame(bien.nw.unique.species) # set as a dataframe for outp
 write.csv(dataframe, "/home/eric/Documents/Projects/C_Working/CC_Extinction/BIEN_NW_specieslist.csv") 
 write.csv(dataframe, "C:/Users/Eric/Documents/Plant_Extinction/unique_species.csv")
 # to view this ^^^ in a csv reader, have to change the input format
+# this is input to TNRS, which will generate matches
 
 # Compare names in TNRS
 BIEN.species.corrected <- read.csv("/home/eric/Documents/Projects/C_Working/CC_Extinction/tnrs_bien_NW_results.csv", 
@@ -59,11 +61,11 @@ species.translation <- merge(species, BIEN.species.corrected, by.x = "x", by.y =
 not.included <- species.translation[is.na(species.translation$Name_submitted),1]
 
 # Clear out rows that are not in BIEN dataset (Name_submitted != <NA>)
-species.in.BIEN <- species.translation[!is.na(species.translation$Name_submitted),1]
+species.in.BIEN <- species.translation[!is.na(species.translation$x),1]
 
 # Occurrence data for all species (WARNING: THIS IS LIKE 30 GB OF DATA without only.new.world/native status = T)
 species.occurrence <- BIEN_occurrence_species(species=species.in.BIEN, only.new.world = T, native.status = T)
-species.occurrence <- read.csv("C:/Users/Eric/Documents/Plant_Extinction/NW_Native_Occurrence.csv")
+species.occurrence <- fread("C:/Users/Eric/Documents/Plant_Extinction/NW_Native_Occurrence.csv")
 write.csv(species.occurrence, "C:/Users/Eric/Documents/Plant_Extinction/NW_Native_Occurrence.csv")
 species.occurrence <- read.csv("/home/eric/Documents/Projects/C_Working/CC_Extinction/NW_Native_Occurrence.csv")
 write.csv(species.occurrence, "/home/eric/Documents/Projects/C_Working/CC_Extinction/NW_Native_Occurrence.csv")
@@ -104,10 +106,10 @@ species.occurrence.data <- over(so.cleaned, WWF_Biomes[, "BIOME"])
 so.cleaned$biome <- species.occurrence.data$BIOME
 
 # collapse the species data so it has species and biome only
-
+so.unique <- unique(so.cleaned[,c("scrubbed_species_binomial", "biome")])
 
 # export occurrence - biome data
-write.csv(so.cleaned, "C:/Users/Eric/Documents/Plant_Extinction/species_occurrence_processed.csv")
+write.csv(so.unique, "C:/Users/Eric/Documents/Plant_Extinction/species_with_biome.csv")
 
 # function(species_dir){
 #     species.list <- read.csv(species_dir)
