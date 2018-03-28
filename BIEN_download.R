@@ -30,10 +30,39 @@ gsub("_", " ", data.downloadable$as.char, fixed = TRUE)
 data.download <- BIEN_ranges_species(species=data.downloadable$as.char, 
                                      directory="C:/Users/Eric/Documents/Plant_Extinction/GIS_Data")
 
+# list of species names for TNRS validation
+nw.countries <- c("Canada", "United States", "Mexico", "Guatemala", "Brazil", "Peru", "Argentina", "Colombia", "Chile", "Venezuela",
+                  "Cuba", "Costa Rica", "Ecuador", "Panama", "Bolivia", "Dominican Republic", "Puerto Rico", "Uruguay", "Honduras", 
+                  "Belieze", "Nicaragua", "Jamaica", "El Salvador", "Haiti", "Paraguay", "Guyana", "Bahamas", "Aruba", "Suriname",
+                  "Barbados", "Curacao", "Turks and Caicos Islands", "Saint Lucia", "Bermuda", "Guadeloupe", "Martinique", 
+                  "Cayman Islands", "French Guiana", "Trinidad and Tobago", "Grenada", "Falkland Islands", "Dominica",
+                  "Antigua and Barbuda", "Saint Kitts and Nevis", "Saint Vincent and the Grenadines", "Montserrat", "Anguilla",
+                  "Sint Maarten", "Carribean Netherlands")
+bien.nw.species <- BIEN_list_country(country=nw.countries) # list of species in all the new world countries
+bien.nw.unique.species <- unique(bien.nw.species$scrubbed_species_binomial) # unique species
+dataframe <- as.data.frame(bien.nw.unique.species) # set as a dataframe for output
+write.csv(dataframe, "/home/eric/Documents/Projects/C_Working/CC_Extinction/BIEN_NW_specieslist.csv") 
+# to view this ^^^ in a csv reader, have to change the input format
+
+# Compare names in TNRS
+BIEN.species.corrected <- read.csv("/home/eric/Documents/Projects/C_Working/CC_Extinction/tnrs_bien_NW_results.csv", 
+                                   fileEncoding = "UTF-16")
+
+# Join requested species list with list of species available in BIEN by corrected name
+species.translation <- merge(species, BIEN.species.corrected, by.x = "x", by.y = "Name_matched", all.x=TRUE)
+
+# Use BIEN name to get requested occurrence data
+# List species not covered by the BIEN data (Name_submitted == <NA>)
+not.included <- species.translation[is.na(species.translation$Name_submitted),1]
+
+# Clear out rows that are not in BIEN dataset (Name_submitted != <NA>)
+species.in.BIEN <- species.translation[!is.na(species.translation$Name_submitted),1]
+
 # Occurrence data for all species (WARNING: THIS IS LIKE 30 GB OF DATA without only.new.world/native status = T)
-species.occurrence <- BIEN_occurrence_species(species=species$x, only.new.world = T, native.status = T)
+species.occurrence <- BIEN_occurrence_species(species=species.in.BIEN, only.new.world = T, native.status = T)
 species.occurrence <- read.csv("C:/Users/Eric/Documents/Plant_Extinction/NW_Native_Occurrence.csv")
 write.csv(species.occurrence, "C:/Users/Eric/Documents/Plant_Extinction/NW_Native_Occurrence.csv")
+species.occurrence <- read.csv("/home/eric/Documents/Projects/C_Working/CC_Extinction/NW_Native_Occurrence.csv")
 write.csv(species.occurrence, "/home/eric/Documents/Projects/C_Working/CC_Extinction/NW_Native_Occurrence.csv")
 
 # In ArcMap, combined all species range shapefiles into one file using Merge
