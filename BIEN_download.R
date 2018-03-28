@@ -42,12 +42,15 @@ bien.nw.species <- BIEN_list_country(country=nw.countries) # list of species in 
 bien.nw.unique.species <- unique(bien.nw.species$scrubbed_species_binomial) # unique species
 dataframe <- as.data.frame(bien.nw.unique.species) # set as a dataframe for output
 write.csv(dataframe, "/home/eric/Documents/Projects/C_Working/CC_Extinction/BIEN_NW_specieslist.csv") 
+write.csv(dataframe, "C:/Users/Eric/Documents/Plant_Extinction/unique_species.csv")
 # to view this ^^^ in a csv reader, have to change the input format
 
 # Compare names in TNRS
 BIEN.species.corrected <- read.csv("/home/eric/Documents/Projects/C_Working/CC_Extinction/tnrs_bien_NW_results.csv", 
                                    fileEncoding = "UTF-16")
 
+BIEN.species.corrected <- read.csv("C:/Users/Eric/Documents/Plant_Extinction/tnrs_bien_NW_results.csv", 
+                                   fileEncoding = "UTF-16")
 # Join requested species list with list of species available in BIEN by corrected name
 species.translation <- merge(species, BIEN.species.corrected, by.x = "x", by.y = "Name_matched", all.x=TRUE)
 
