@@ -1,19 +1,12 @@
 # BIEN data collection script
 
 library(BIEN)
-library(maps)
 library(data.table)
 
 # Import the species list
-## species <- read.csv("this is a species csv.csv", as.is=TRUE)
-#testing
 species <- read.csv("C:/Users/Eric/Documents/Plant_Extinction/SpeciesNames_1missing_irred.csv", as.is = TRUE)
 species <- read.csv("/home/eric/Documents/Projects/C_Working/CC_Extinction/SpeciesNames_1missing_irred.csv", as.is=TRUE)
 
-# grab the species name column (genus species) -- as character -- only for getting list of species from BIEN
-#name <- species$scrubbed_species_binomial
-
-#gsub("\\", "", species, fixed=TRUE)
 # get list of all shapefiles -- gives species names as integer?
 data.available <- BIEN_ranges_species(species=species$x,  match_names_only = TRUE)
 
@@ -81,7 +74,7 @@ library(sp)
 
 WWF_Biomes <- readOGR(dsn = "C:/Users/Eric/Documents/Plant_Extinction/GIS_Data/WWF_Biomes", 
                       layer = "wwf_terr_ecos")
-WWF_Biomes <- readOGR(dsn = "/home/eric/Documents/Projects/C_Working/CC_Extinction/Biome_Boundaries_WWF", 
+WWF_Biomes <- readOGR(dsn = "/home/eric/Documents/Projects/C_Working/CC_Extinction/WWF_Biomes", 
                       layer = "wwf_terr_ecos")
 
 #View shapefile attributes
@@ -99,43 +92,37 @@ so.cleaned <- so.cleaned[so.cleaned@coords[,2]<90,]
 # attach a coordinate system to the data
 proj4string(so.cleaned) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
 
-# UNNECESSARY? so.projected <- spTransform(so.cleaned, CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"))
-
 # create a table of which occurrences are in which biomes, and add that table to the cleaned species occurrence data table
 species.occurrence.data <- over(so.cleaned, WWF_Biomes[, "BIOME"])
 so.cleaned$biome <- species.occurrence.data$BIOME
 
 # collapse the species data so it has species and biome only
-so.unique <- unique(so.cleaned[,c("scrubbed_species_binomial", "biome")])
+so.unique <- unique(data.frame(species = so.cleaned$scrubbed_species_binomial, biome = so.cleaned$biome)[,c("species", "biome")])
 
 # export occurrence - biome data
 write.csv(so.unique, "C:/Users/Eric/Documents/Plant_Extinction/species_with_biome.csv")
-
-# function(species_dir){
-#     species.list <- read.csv(species_dir)
-#     data.available <- BIEN_ranges_species(species=species.list$x, match_names_only = TRUE)
-#     data.downloadable <- subset(data.available, `Range_map_available?` == "Yes")
-#     data.missed <- subset(data.available, `Range_map_available?` == "No")
-#     
-# }
-
+write.csv(so.unique, "/home/eric/Documents/Projects/C_Working/CC_Extinction/species_with_biome_NW.csv")
+so.unique <- fread("/home/eric/Documents/Projects/C_Working/CC_Extinction/species_with_biome_NW.csv")
 ## Trait Data
 # how many of which observed trait data per species
 BIEN_trait_traits_per_species(species = species.in.BIEN)
 
 # download trait data
+library(data.table)
 species.traits <- BIEN_trait_species(species=species.in.BIEN)
 write.csv(species.traits, "/home/eric/Documents/Projects/C_Working/CC_Extinction/species_trait_data.csv")
 write.csv(species.traits, "C:/Users/Eric/Documents/Plant_Extinction/species_trait_data.csv")
+species.traits <- fread("/home/eric/Documents/Projects/C_Working/CC_Extinction/species_trait_data.csv")
 
 out.df <- data.frame(matrix(ncol=7, nrow=0))
 column.names <- c("Species", "Plant_Height_Min", "Plant_Height_Max", 
                   "Seed_Mass_Min", "Seed_Mass_Max", "Growth Form", "Dispersal Mode") #Add biome to this list?
 colnames(out.df) <- column.names
-library(data.table)
-for (i in unique(species.traits$scrubbed_species_binomial)){
+
+for (i in species.in.BIEN){
+    print(i)
     # For each species, find the max and min of each trait of interest
-    active.subset <- subset(species.traits, species==i)
+    active.subset <- subset(species.traits, scrubbed_species_binomial==i)
     spec.out <- i
     # does growth form need to have separate values for the other trait ranges? 
     # i.e. something as a shrub has some height values, where that thing as a tree has another range
@@ -143,30 +130,26 @@ for (i in unique(species.traits$scrubbed_species_binomial)){
     # growth form will need to be looked into a little bit more (herb_tree? really??)
     for (j in unique(active.subset$trait_value[active.subset$trait_name=="whole plant growth form diversity"])){
       gf <- j
-      # same goes for dispersal syndrome (we will see if it matters in the output) -- skipping blank dispersal syndromes
-      wpds <- unique(active.subset$trait_value[active.subset$trait_name=="whole plant dispersal syndrome"])
-      wpds[is.na(wpds)] <- "none"
+      # # same goes for dispersal syndrome (we will see if it matters in the output) -- skipping blank dispersal syndromes
       for (k in wpds){
-        ds <- k
-        # print(unique(active.subset$trait_name))
-        ph <- active.subset$trait_value[active.subset$trait_name=="whole plant height"]
-        phmin <- min(ph)
-        phmax <- max(ph)
-        sm <- active.subset$trait_value[active.subset$trait_name=="seed mass"]
-        smmin <- min(sm)
-        smmax <- max(sm)
-        data.out <- c(i, phmin, phmax, smmin, smmax, gf, ds)
-        out.df = rbindlist(list(out.df, as.list(data.out)))
+          ds <- k
+          ph <- active.subset$trait_value[active.subset$trait_name=="whole plant height"]
+          phmin <- min(ph)
+          phmax <- max(ph)
+          sm <- active.subset$trait_value[active.subset$trait_name=="seed mass"]
+          smmin <- min(sm)
+          smmax <- max(sm)
+          data.out <- c(i, phmin, phmax, smmin, smmax, gf, ds)
+          out.df = rbindlist(list(out.df, as.list(data.out)))
+          # if you don't clear the system memory between runs this list will get really long and give you weird results
       }
     }
 }
 
-## species names are not matching!!
-write.csv(out.df, "C:/Users/Eric/Documents/Plant_Extinction/traits_by_species.csv")
-write.csv(out.df, "/home/eric/Documents/Projects/C_Working/CC_Extinction/traits_by_species.csv")
-# Creates a background map
-map('world', fill=T, col="grey", bg="light blue", xlim=c(-180, -20), ylim=c(-60, 80))
-# Plots occurrence points on the map
-points(cbind(so.cleaned$longitude, so.cleaned$latitude), col="red")
+# export species traits as a csv
+write.csv(out.df, "C:/Users/Eric/Documents/Plant_Extinction/traits_by_species_NW.csv")
+write.csv(out.df, "/home/eric/Documents/Projects/C_Working/CC_Extinction/traits_by_species_NW.csv")
 
-plot(species.occurrence, col="green", add=T)
+# adding biomes to trait data
+species.trait.biome <- merge(out.df, so.unique, by.x = "Species", by.y = "species", all.x=TRUE)
+write.csv(species.trait.biome, "/home/eric/Documents/Projects/C_Working/CC_Extinction/species_trait_biome_NW.csv")
