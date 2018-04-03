@@ -149,7 +149,11 @@ for (i in species.in.BIEN){
 # export species traits as a csv
 write.csv(out.df, "C:/Users/Eric/Documents/Plant_Extinction/traits_by_species_NW.csv")
 write.csv(out.df, "/home/eric/Documents/Projects/C_Working/CC_Extinction/traits_by_species_NW.csv")
+out.df <- read.csv("/home/eric/Documents/Projects/C_Working/CC_Extinction/traits_by_species_NW.csv")
 
 # adding biomes to trait data
 species.trait.biome <- merge(out.df, so.unique, by.x = "Species", by.y = "species", all.x=TRUE)
-write.csv(species.trait.biome, "/home/eric/Documents/Projects/C_Working/CC_Extinction/species_trait_biome_NW.csv")
+# biome names copied from the layer labels in the WWF shapefile
+biome.number <- read.csv("/home/eric/Documents/Projects/C_Working/CC_Extinction/Biome_Names.csv")
+species.trait.biome.name <- merge(species.trait.biome, biome.number, by.x = "biome", by.y = "Biome_No", all.x=TRUE)
+write.csv(species.trait.biome.name, "/home/eric/Documents/Projects/C_Working/CC_Extinction/species_trait_biome_NW.csv")
